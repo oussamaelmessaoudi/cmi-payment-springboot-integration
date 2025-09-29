@@ -1,4 +1,19 @@
 package com.cmi.cmipaymentintegration.validation;
 
-public interface ValidTransactionStatus {
+import jakarta.validation.Constraint;
+import jakarta.validation.Payload;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target({ElementType.FIELD})
+@Retention(RetentionPolicy.RUNTIME)
+@Constraint(validatedBy = TransactionStatusValidator.class)
+public @interface ValidTransactionStatus {
+    String message() default "Invalid transaction status";
+    Class<?>[] groups() default {};
+    Class<? extends Payload>[] payload() default {};
+
 }

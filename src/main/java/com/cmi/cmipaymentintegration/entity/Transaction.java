@@ -17,10 +17,9 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
-@Setter
 @Builder
 public class Transaction {
+    // IDENTIFIERS
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // auto-incremented/ generated id (db primary key)
@@ -32,11 +31,22 @@ public class Transaction {
     private String cmiTransactionId; // the unique id returns by cmi after transaction is processed
     //it may be null until the process of payment finishes
 
+    // MERCHANT INFO
     @Column(name="merchant_id",nullable = false)
     private String merchantId; // your CMI merchant ID
 
     @Column(nullable = false)
     private BigDecimal amount;
+
+    @Column(nullable = false)
+    private String currency; // currency code (USD,MAD, EUR ...)
+
+    // CUSTOMER INFO
+    private String customerEmail;
+    private String customerName;
+    private String customerPhone;
+
+    // STATUS & METHOD
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false,name="transaction_status")
@@ -48,12 +58,14 @@ public class Transaction {
     @ValidPaymentMethod
     private PaymentMethod paymentMethod;
 
+    private LocalDateTime processedAt; // After finishing payment, it will be handled by the service layer
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+    // URLs
 
     private String returnUrl; // Url used by cmi to redirect user
     private String callbackUrl; // Url to send s2s notifications
+
+    // CMI RESPONSE
 
     @Column(columnDefinition = "TEXT")
     private String cmiResponse; // the payload/ raw JSON received from the cmi ("TEXT" in order to handle long payloads)
@@ -61,14 +73,13 @@ public class Transaction {
     @Column(columnDefinition = "TEXT")
     private String failureReason; // extracting and storing the failure reason from payload if provided
 
-    @Column(nullable = false)
-    private String currency; // currency code (USD,MAD, EUR ...)
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
-    //Customer Info
-    private String customerEmail;
-    private String customerName;
-    private String customerPhone;
+    // AUDIT
 
+    private String clientIp; //Capturing the requester's ip
+    private String userAgent; // and agent string for audit and fraud checks
 
     @CreationTimestamp
     private LocalDateTime createdAt; //Filled automatically once the row is inserted
@@ -76,18 +87,21 @@ public class Transaction {
     @UpdateTimestamp
     private LocalDateTime updatedAt; // Updated automatically once the row is changed
 
-    private LocalDateTime processedAt; // After finishing payment, it will be handled by the service layer
-
     @Version
     private Long version; //Implementing optimistic locking (prevents concurrency issues)
 
-    //Audit fields
-    private String clientIp; //Capturing the requester's ip
-    private String userAgent; // and agent string for audit and fraud checks
+    // METADATA
 
     @ElementCollection
     @CollectionTable(name="transaction_metadata")
     @MapKeyColumn(name="key_name")
     @Column(name="value")
     private Map<String,String> metadata = new HashMap<>(); // storing extra infos in another table named transaction_metadata
+
+    @PreUpdate
+    public void updateProcessedAt(){
+        if(this.status == TransactionStatus.SUCCESS && this.processedAt == null){
+            this.processedAt = LocalDateTime.now();
+        }
+    }
 }
